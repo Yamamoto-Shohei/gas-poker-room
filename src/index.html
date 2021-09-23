@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+    <title>Poker room</title>
+    <base target="_top">
+  </head>
+  <body>
+    <section class="hero is-primary">
+      <div class="hero-body">
+        <p class="title">
+          Poker room
+        </p>
+        <p class="subtitle">
+          プランニングポーカーなど、選択した数値を一斉オープンする時にご利用ください。<br />
+          <span class="subtitle is-6">Zoomなど参加者全員とビデオ会議 or 音声通話している状態で利用することを前提としています。<span>
+        </p>
+      </div>
+    </section>
+    <div id="app">
+      <section class="section">
+        <div class="container">
+          <div class="tile is-parent">
+            <div class="tile">
+              <template v-if="!roomId">
+                <div class="tile is-3">
+                  <button class="button is-info is-light is-medium" @click="setRoomId">Generate roomId</button>
+                </div>
+                <div class="tile is-6">
+                  <input class="input is-link is-light is-medium" type="text" placeholder="room id" v-model="joinRoomId">
+                </div>
+                <div class="tile is-3">
+                  <button class="button is-link is-light is-medium" @click="joinRoom">Join room</button>
+                </div>
+              </template>
+              <template v-else>
+                <div class="tile is-3">
+                  <button class="button is-info is-light is-medium" @click="copyToClipboard" >
+                    <span class="icon"><i class="fas fa-copy"></i></span>
+                    <span>{{ roomId }}</span>
+                  </button>
+                </div>
+                <div class="tile is-4">
+                  <input class="input is-medium" type="text" placeholder="ルーム内で通じる名前を入力してください。" autocomplete="nickname" v-model="name">
+                </div>
+                <div class="tile is-2">
+                  <button class="button is-info is-light is-medium" @click="setName" :disabled="!name">
+                    <span class="icon"><i class="fas fa-sign-in-alt"></i></span>
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+          <template v-if="roomData">
+            <template v-if="isShowNotification">
+              <div class="notification is-primary">
+                <button class="delete" @click="hideNotification"></button>
+                ルームで利用する番号を設定してください。<br />
+                こちらの設定は、参加者全員が実施できます。途中で変更する事も可能です。
+              </div>
+            </template>
+            <div class="tile is-parent">
+              <button class="tile is-12 button is-danger is-light is-fullwidth" @click="openShowSettingModal" >
+                <span class="icon is-small"><i class="fas fa-edit"></i></span>
+                <span>選択項目変更</span>
+              </button>
+            </div>
+            <div class="modal" :class="[isShowSettingModal ? 'is-active' : '']">
+              <div class="modal-background"></div>
+              <div class="modal-content">
+                <div class="box">
+                  <div class="buttons are-medium is-3">
+                    <button @click="mode123" class="tile button is-warning is-dark">
+                      1〜3
+                    </button>
+                    <button @click="modePlayingCards" class="tile button is-warning is-dark">
+                      トランプ
+                    </button>
+                    <button @click="modeFibonacci" class="tile button is-warning is-dark">
+                      フィボナッチ
+                    </button>
+                    <button @click="modeTension" class="tile button is-warning is-dark">
+                      テンション
+                    </button>
+                  </div>
+                  <div class="columns is-flex-direction-row is-flex-wrap-wrap">
+                    <div class="column is-3" v-for="(customItem, index) in customItems">
+                      <input class="input is-rounded" type="text" v-model="customItems[index]"></input>
+                    </div>
+                    <div class="column">
+                      <button class="button is-ghost" @click="customAdd" >
+                        <span class="icon is-small"><i class="fas fa-plus-square"></i></span>
+                      </button>
+                      <button class="button is-ghost" @click="customTake" >
+                        <span class="icon is-small"><i class="fas fa-minus-square"></i></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="tile is-vertical">
+                  <button class="button is-primary is-light" @click="setSelectItems" >
+                    <span class="icon is-small"><i class="fas fa-angle-double-down"></i></span>
+                  </button>
+                </div>
+              </div>
+              <button class="modal-close is-large" aria-label="close" @click="closeShowSettingModal"></button>
+            </div>
+            <div class="tile is-parent">
+              <button v-if="!roomData.isVoting"
+                class="tile is-12 button is-primary is-light is-fullwidth"
+                @click="startVoting"
+                :disabled="!roomData.selectItems.length">
+                <span class="icon is-small"><i class="fas fa-hourglass-start"></i></span>
+                <span>START</span>
+              </button>
+              <button v-else
+                class="tile is-12 button is-light is-light is-fullwidth"
+                @click="stopVoting"
+                :disabled="!roomData.selectItems.length">
+                <span class="icon is-small"><i class="fas fa-hourglass-start"></i></span>
+                <span>CANCEL</span>
+              </button>
+            </div>
+            <template v-if="roomData.selectItems && roomData.selectItems.length">
+              <div class="tile is-parent columns is-justify-content-flex-start buttons are-medium">
+                <div class="column is-2" v-for="selectItem in roomData.selectItems">
+                  <button @click="selectHundole"
+                    class="button is-rounded is-fullwidth" 
+                    :value="selectItem"
+                    :class="[isSelected(selectItem) ? 'is-light' : 'is-black', roomData.isVoting ? 'is-primary' : '']"
+                    :disabled="!roomData.isVoting">
+                    {{ selectItem }}
+                  </button>
+                </div>
+              </div>
+            </template>
+            <div class="columns tile is-parent is-12">
+              <template v-if="roomData.users">
+                <div class="column is-2" v-for="(user, key) in roomData.users">
+                  <div class="notification is-12" :class="[ userId == key ? 'is-link' : 'is-warning']">
+                    <button class="delete" @click="exitRoom(key)"></button>
+                    <p class="subtitle is-6" :class="[ userId == key ? 'has-text-white' : '']">
+                      {{ user.name ? user.name : '...No name yet' }}
+                    </p>
+                    <template v-if="roomData.isStart">
+                      <template v-if="roomData.isVoting">
+                        <template v-if="!user.selected">
+                          <span class="button is-loading is-fullwidth" :class="[ userId == key ? 'is-link' : 'is-warning']">voting</span>
+                        </template>
+                        <template v-else>
+                          <span class="button is-fullwidth" :class="[ userId == key ? 'is-link' : 'is-warning']">
+                            <span class="icon" :class="[ userId == key ? 'has-text-white' : '']"><i class="fas fa-pen-square"></i></span>
+                          </span>
+                        </template>
+                      </template>
+                      <template v-else>
+                        <span class="title" :class="[ userId == key ? 'has-text-white' : '']">{{ user.select }}</span>
+                      </template>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
+
+<script>
+new Vue({
+  el: '#app',
+  data: {
+    url: <?=url ?>,
+    roomId: '',
+    userId: '',
+    name: '',
+    joinRoomId: <?=roomId ?>,
+    custom: false,
+    customItems: [1, 2, 3],
+    isShowNotification: true,
+    isShowSettingModal: false,
+    roomData: null,
+    isPolling: false,
+  },
+  computed: {
+  },
+  methods: {
+    isSelected: function(value) {
+      return this.roomData.users[this.userId].select == value
+    },
+    setRoomId: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomId = response.roomId
+        this.userId = response.userId
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).createRoom()
+    },
+    joinRoom: function() {
+      google.script.run.withSuccessHandler((response) => {
+        if (response) {
+          this.roomId = this.joinRoomId
+          this.userId = response.userId
+        } else {
+          this.joinRoomId = 'roomが存在しません。'
+        }
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).joinRoom(this.joinRoomId)
+    },
+    setName: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+        this.polling()
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).setName(this.roomId, this.userId, this.name)
+    },
+    setSelectItems: function() {
+      const selectItems = this.customItems.filter(item => item)
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+        this.closeShowSettingModal()
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).setSelectItems(this.roomId, selectItems)
+    },
+    selectHundole: function(e) {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).setSelected(this.roomId, this.userId, e.target.value)
+    },
+    copyToClipboard: function() {
+      const urlLink = `${this.url}?roomId=${this.roomId}`
+      navigator.clipboard.writeText(urlLink)
+    },
+    customAdd: function() {
+      this.customItems = [...this.customItems, '']
+    },
+    customTake: function() {
+      const tmp = [...this.customItems]
+      this.customItems = tmp.slice(0, -1)
+    },
+    mode123: function() {
+      this.customItems = [1, 2, 3]
+    },
+    modeTension: function() {
+      this.customItems = ['Best', 'Good', 'Usually', 'Bad', 'Worst']
+    },
+    modePlayingCards: function() {
+      this.customItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 'Jack', 'Queen', 'King', 'Joker']
+    },
+    modeFibonacci: function() {
+      const fib = (n) => {
+        let a = 1
+        let b = 1
+        for (let i = 3; i <= n; i++) {
+          const c = a + b
+          a = b
+          b = c
+        }
+        return b
+      }
+      const arr = ['0', '1/2']
+      for (let i = 2; i < 13; i++) {
+        arr.push(fib(i))
+      }
+      arr.push('？')
+      this.customItems = arr
+    },
+    hideNotification: function() {
+      this.isShowNotification = false
+    },
+    openShowSettingModal: function() {
+      this.isShowSettingModal = true
+    },
+    closeShowSettingModal: function() {
+      this.isShowSettingModal = false
+    },
+    startVoting: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).isVoting(this.roomId, true)
+    },
+    stopVoting: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).isVoting(this.roomId, false)
+    },
+    exitRoom: function(userId) {
+      google.script.run.withSuccessHandler((response) => {
+        console.log(response)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).exitRoom(this.roomId, userId)
+    },
+    polling: async function() {
+      if (this.isPolling) return
+      this.isPolling = true
+      while (this.isPolling) {
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        google.script.run.withSuccessHandler((response) => {
+          const updateRoomData = response.roomData ? JSON.parse(response.roomData) : null
+          if (!updateRoomData || !updateRoomData.users[this.userId]) {
+            window.open(this.url, '_top')
+            return
+          }
+          this.roomData = updateRoomData
+        }).withFailureHandler((e) => {
+          console.log(e)
+        }).polling(this.roomId)
+      }
+    },
+  }
+})
+</script>
