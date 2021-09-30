@@ -10,18 +10,18 @@
     <base target="_top">
   </head>
   <body>
-    <section class="hero is-primary">
-      <div class="hero-body">
-        <p class="title">
-          Poker room
-        </p>
-        <p class="subtitle">
-          プランニングポーカーなど、選択した数値を一斉オープンする時にご利用ください。<br />
-          <span class="subtitle is-6">Zoomなど参加者全員とビデオ会議 or 音声通話している状態で利用することを前提としています。<span>
-        </p>
-      </div>
-    </section>
     <div id="app">
+      <section class="hero" :class="[isGhost ? 'is-dark' : 'is-primary']">
+        <div class="hero-body">
+          <p class="title">
+            Poker room
+          </p>
+          <p class="subtitle">
+            プランニングポーカーなど、選択した数値を一斉オープンする時にご利用ください。<br />
+            <span class="subtitle is-6">Zoomなど参加者全員とビデオ会議 or 音声通話している状態で利用することを前提としています。<span>
+          </p>
+        </div>
+      </section>
       <section class="section">
         <div class="container">
           <div class="tile is-parent">
@@ -33,33 +33,35 @@
                 <div class="tile is-6">
                   <input class="input is-link is-light is-medium" type="text" placeholder="room id" v-model="joinRoomId">
                 </div>
-                <div class="tile is-3">
-                  <button class="button is-link is-light is-medium" @click="joinRoom">Join room</button>
+                <div class="tile is-3 buttons are-medium">
+                  <button class="button is-link is-light" @click="joinRoom(false)">Join room</button>
+                  <button class="button is-ghost" @click="joinRoom(true)">Ghost join</button>
                 </div>
               </template>
               <template v-else>
                 <div class="tile is-3">
                   <button class="button is-info is-light is-medium" @click="copyToClipboard" >
                     <span class="icon"><i class="fas fa-copy"></i></span>
-                    <span>{{ roomId }}</span>
-                  </button>
+                    <span>{{ roomId }}</span> 
                 </div>
-                <div class="tile is-4">
-                  <input class="input is-medium" type="text" placeholder="ルーム内で通じる名前を入力してください。" autocomplete="nickname" v-model="name">
-                </div>
-                <div class="tile is-2">
-                  <button class="button is-info is-light is-medium" @click="setName" :disabled="!name">
-                    <span class="icon"><i class="fas fa-sign-in-alt"></i></span>
-                  </button>
-                </div>
+                <template v-if="!isGhost">
+                  <div class="tile is-6">
+                    <input class="input is-medium" type="text" placeholder="ルーム内で通じる名前を入力してください。" autocomplete="nickname" v-model="name">
+                  </div>
+                  <div class="tile is-3">
+                    <button class="button is-info is-light is-medium" @click="setName" :disabled="!name">
+                      <span class="icon"><i class="fas fa-sign-in-alt"></i></span>
+                    </button>
+                  </div>
+                </template>
               </template>
             </div>
           </div>
           <template v-if="roomData">
             <template v-if="isShowNotification">
-              <div class="notification is-primary">
+              <div class="notification" :class="[isGhost ? 'is-dark' : 'is-primary']">
                 <button class="delete" @click="hideNotification"></button>
-                ルームで利用する番号を設定してください。<br />
+                選択項目を設定してください。<br />
                 こちらの設定は、参加者全員が実施できます。途中で変更する事も可能です。
               </div>
             </template>
@@ -84,7 +86,7 @@
                       フィボナッチ
                     </button>
                     <button @click="modeTension" class="tile button is-warning is-dark">
-                      テンション
+                      気分
                     </button>
                   </div>
                   <div class="columns is-flex-direction-row is-flex-wrap-wrap">
@@ -138,13 +140,13 @@
                 </div>
               </div>
             </template>
-            <div class="columns tile is-parent is-12">
+            <div class="tile is-parent columns is-12 is-flex-direction-row is-flex-wrap-wrap">
               <template v-if="roomData.users">
                 <div class="column is-2" v-for="(user, key) in roomData.users">
                   <div class="notification is-12" :class="[ userId == key ? 'is-link' : 'is-warning']">
                     <button class="delete" @click="exitRoom(key)"></button>
                     <p class="subtitle is-6" :class="[ userId == key ? 'has-text-white' : '']">
-                      {{ user.name ? user.name : '...No name yet' }}
+                      {{ user.name ? user.name : 'Under naming...' }}
                     </p>
                     <template v-if="roomData.isStart">
                       <template v-if="roomData.isVoting">
@@ -166,8 +168,8 @@
               </template>
             </div>
           </template>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   </body>
 </html>
@@ -187,12 +189,13 @@ new Vue({
     isShowSettingModal: false,
     roomData: null,
     isPolling: false,
+    isGhost: false
   },
   computed: {
   },
   methods: {
     isSelected: function(value) {
-      return this.roomData.users[this.userId].select == value
+      return !this.isGhost && this.roomData.users[this.userId].select == value
     },
     setRoomId: function() {
       google.script.run.withSuccessHandler((response) => {
@@ -202,17 +205,24 @@ new Vue({
         console.log(e)
       }).createRoom()
     },
-    joinRoom: function() {
+    joinRoom: function(isGhost) {
+      console.log(isGhost)
       google.script.run.withSuccessHandler((response) => {
         if (response) {
           this.roomId = this.joinRoomId
           this.userId = response.userId
+          if (isGhost) {
+            this.isGhost = isGhost
+            this.userId = 'ghost'
+            this.roomData = JSON.parse(response.roomData)
+            this.polling()
+          }
         } else {
           this.joinRoomId = 'roomが存在しません。'
         }
       }).withFailureHandler((e) => {
         console.log(e)
-      }).joinRoom(this.joinRoomId)
+      }).joinRoom(this.joinRoomId, isGhost)
     },
     setName: function() {
       google.script.run.withSuccessHandler((response) => {
@@ -232,6 +242,7 @@ new Vue({
       }).setSelectItems(this.roomId, selectItems)
     },
     selectHundole: function(e) {
+      if (this.isGhost) return
       google.script.run.withSuccessHandler((response) => {
         this.roomData = JSON.parse(response.roomData)
       }).withFailureHandler((e) => {
@@ -243,9 +254,16 @@ new Vue({
       navigator.clipboard.writeText(urlLink)
     },
     customAdd: function() {
-      this.customItems = [...this.customItems, '']
+      let addItem = 0
+      if (this.customItems.length) {
+        const lastOneBefore = Number(this.customItems[this.customItems.length - 2])
+        const lastOne = Number(this.customItems[this.customItems.length - 1])
+        addItem = lastOneBefore && lastOne ? (lastOne + lastOne - lastOneBefore) : (lastOne ? lastOne + 1 : '')
+      }
+      this.customItems = [...this.customItems, addItem]
     },
     customTake: function() {
+      if (!this.customItems.length) return
       const tmp = [...this.customItems]
       this.customItems = tmp.slice(0, -1)
     },
@@ -313,7 +331,7 @@ new Vue({
         await new Promise(resolve => setTimeout(resolve, 2000))
         google.script.run.withSuccessHandler((response) => {
           const updateRoomData = response.roomData ? JSON.parse(response.roomData) : null
-          if (!updateRoomData || !updateRoomData.users[this.userId]) {
+          if (!updateRoomData || (!this.isGhost && !updateRoomData.users[this.userId])) {
             window.open(this.url, '_top')
             return
           }

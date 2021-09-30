@@ -32,15 +32,17 @@ const createRoom = () => {
   return {roomId, userId, roomData: JSON.stringify(roomData)}
 }
 
-const joinRoom = (roomId) => {
+const joinRoom = (roomId, isGhost) => {
   const roomData = getRoomData(roomId)
   if (!roomData) return false
   let userId
-  do {
-    userId = generateUserId()
-  } while (roomData.users[userId])
-  roomData.users[userId] = {selected: false, select: ''}
-  saveRoomData(roomId, roomData)
+  if (!isGhost) {
+    do {
+      userId = generateUserId()
+    } while (roomData.users[userId])
+    roomData.users[userId] = {selected: false, select: ''}
+    saveRoomData(roomId, roomData)
+  }
   return {userId, roomData: JSON.stringify(roomData)}
 }
 
