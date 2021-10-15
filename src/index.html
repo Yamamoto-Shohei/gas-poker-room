@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://unpkg.com/v-tooltip"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
     <title>Poker room</title>
@@ -40,9 +41,17 @@
               </template>
               <template v-else>
                 <div class="tile is-3">
-                  <button class="button is-info is-light is-medium" @click="copyToClipboard" >
-                    <span class="icon"><i class="fas fa-copy"></i></span>
-                    <span>{{ roomId }}</span> 
+                  <v-popover offset="10" placement="top">
+                    <template slot="popover">
+                      <span class="tag is-success is-light">
+                        Copied to clipboard!!
+                      </span>
+                    </template>
+                    <button class="button is-info is-light is-medium" @click="copyToClipboard">
+                      <span class="icon"><i class="fas fa-copy"></i></span>
+                      <span>{{ roomId }}</span>
+                    </button>
+                  </v-popover>
                 </div>
                 <template v-if="!isGhost">
                   <div class="tile is-6">
@@ -76,8 +85,8 @@
               <div class="modal-content">
                 <div class="box">
                   <div class="buttons are-medium is-3">
-                    <button @click="mode123" class="tile button is-warning is-dark">
-                      1〜3
+                    <button @click="mode1220" class="tile button is-warning is-dark">
+                      1〜20
                     </button>
                     <button @click="modePlayingCards" class="tile button is-warning is-dark">
                       トランプ
@@ -140,27 +149,54 @@
                 </div>
               </div>
             </template>
+            <div class="columns" v-if="selectInfo">
+              <div class="column">
+                <article class="message is-medium is-primary">
+                  <div class="message-header">
+                    <p>Average : {{ selectInfo.average }}</p>
+                  </div>
+                </article>
+              </div>
+              <div class="column">
+                <article class="message is-medium is-info">
+                  <div class="message-header">
+                    <p>Maximum : {{ selectInfo.max }}</p>
+                  </div>
+                </article>
+              </div>
+              <div class="column">
+                <article class="message is-medium is-danger">
+                  <div class="message-header">
+                    <p>Minimum : {{ selectInfo.min }}</p>
+                  </div>
+                </article>
+              </div>
+            </div>
             <div class="tile is-parent columns is-12 is-flex-direction-row is-flex-wrap-wrap">
               <template v-if="roomData.users">
                 <div class="column is-2" v-for="(user, key) in roomData.users">
-                  <div class="notification is-12" :class="[ userId == key ? 'is-link' : 'is-warning']">
+                  <div class="notification is-12"
+                    :class="userPanelClass(user, key)">
                     <button class="delete" @click="exitRoom(key)"></button>
-                    <p class="subtitle is-6" :class="[ userId == key ? 'has-text-white' : '']">
+                    <p class="subtitle is-6" :class="userPanelClass(user, key)">
                       {{ user.name ? user.name : 'Under naming...' }}
                     </p>
                     <template v-if="roomData.isStart">
                       <template v-if="roomData.isVoting">
                         <template v-if="!user.selected">
-                          <span class="button is-loading is-fullwidth" :class="[ userId == key ? 'is-link' : 'is-warning']">voting</span>
+                          <span class="button is-loading is-fullwidth" :class="userPanelClass(user, key)">voting</span>
                         </template>
                         <template v-else>
-                          <span class="button is-fullwidth" :class="[ userId == key ? 'is-link' : 'is-warning']">
-                            <span class="icon" :class="[ userId == key ? 'has-text-white' : '']"><i class="fas fa-pen-square"></i></span>
+                          <span class="button is-fullwidth" :class="userPanelClass(user, key)">
+                            <span class="icon"><i class="fas fa-pen-square"></i></span>
                           </span>
                         </template>
                       </template>
                       <template v-else>
-                        <span class="title" :class="[ userId == key ? 'has-text-white' : '']">{{ user.select }}</span>
+                        <span class="title" 
+                          :class="userPanelClass(user, key)">
+                          {{ user.select }}
+                        </span>
                       </template>
                     </template>
                   </div>
@@ -189,7 +225,8 @@ new Vue({
     isShowSettingModal: false,
     roomData: null,
     isPolling: false,
-    isGhost: false
+    isGhost: false,
+    selectInfo: null,
   },
   computed: {
   },
@@ -267,8 +304,8 @@ new Vue({
       const tmp = [...this.customItems]
       this.customItems = tmp.slice(0, -1)
     },
-    mode123: function() {
-      this.customItems = [1, 2, 3]
+    mode1220: function() {
+      this.customItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     },
     modeTension: function() {
       this.customItems = ['Best', 'Good', 'Usually', 'Bad', 'Worst']
@@ -317,6 +354,26 @@ new Vue({
         console.log(e)
       }).isVoting(this.roomId, false)
     },
+    calSelect: function() {
+      if (this.roomData.isVoting || !Object.keys(this.roomData.users).length) {
+        this.selectInfo = null
+        return
+      }
+      const selectNumbers = []
+      for (const user of Object.values(this.roomData.users)) {
+        if (isNaN(Number(user.select)) || !user.selected) {
+          this.selectInfo = null
+          return
+        }
+        selectNumbers.push(Number(user.select))
+      }
+      this.selectInfo = selectNumbers.length
+        ? {
+          average: selectNumbers.reduce((acc, cur) => acc + cur) / selectNumbers.length,
+          max: selectNumbers.reduce((acc, cur) => acc > cur ? acc : cur),
+          min: selectNumbers.reduce((acc, cur) => acc < cur ? acc : cur),
+        } : null
+    },
     exitRoom: function(userId) {
       google.script.run.withSuccessHandler((response) => {
         console.log(response)
@@ -328,7 +385,7 @@ new Vue({
       if (this.isPolling) return
       this.isPolling = true
       while (this.isPolling) {
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise(resolve => setTimeout(resolve, 800))
         google.script.run.withSuccessHandler((response) => {
           const updateRoomData = response.roomData ? JSON.parse(response.roomData) : null
           if (!updateRoomData || (!this.isGhost && !updateRoomData.users[this.userId])) {
@@ -336,11 +393,24 @@ new Vue({
             return
           }
           this.roomData = updateRoomData
+          this.calSelect()
         }).withFailureHandler((e) => {
           console.log(e)
         }).polling(this.roomId)
       }
     },
+    userPanelClass: function(user, key) {
+      const classList = []
+      if (this.selectInfo) {
+        if (user.select == this.selectInfo.max) classList.push('is-info')
+        else if (user.select == this.selectInfo.min) classList.push('is-danger')
+        else classList.push('is-warning')
+      } else {
+        classList.push('is-warning')
+      }
+      if (this.userId != key) classList.push('is-light')
+      return classList
+    }
   }
 })
 </script>
