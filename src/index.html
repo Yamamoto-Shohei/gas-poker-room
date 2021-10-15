@@ -1,115 +1,416 @@
-const doGet = (e) => {
-  const indexHtml = HtmlService.createTemplateFromFile('index')
-  indexHtml.roomId = e.parameter.roomId ? e.parameter.roomId : ''
-  indexHtml.url = ScriptApp.getService().getUrl()
-  return indexHtml.evaluate()
-}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://unpkg.com/v-tooltip"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+    <title>Poker room</title>
+    <base target="_top">
+  </head>
+  <body>
+    <div id="app">
+      <section class="hero" :class="[isGhost ? 'is-dark' : 'is-primary']">
+        <div class="hero-body">
+          <p class="title">
+            Poker room
+          </p>
+          <p class="subtitle">
+            プランニングポーカーなど、選択した数値を一斉オープンする時にご利用ください。<br />
+            <span class="subtitle is-6">Zoomなど参加者全員とビデオ会議 or 音声通話している状態で利用することを前提としています。<span>
+          </p>
+        </div>
+      </section>
+      <section class="section">
+        <div class="container">
+          <div class="tile is-parent">
+            <div class="tile">
+              <template v-if="!roomId">
+                <div class="tile is-3">
+                  <button class="button is-info is-light is-medium" @click="setRoomId">Generate roomId</button>
+                </div>
+                <div class="tile is-6">
+                  <input class="input is-link is-light is-medium" type="text" placeholder="room id" v-model="joinRoomId">
+                </div>
+                <div class="tile is-3 buttons are-medium">
+                  <button class="button is-link is-light" @click="joinRoom(false)">Join room</button>
+                  <button class="button is-ghost" @click="joinRoom(true)">Ghost join</button>
+                </div>
+              </template>
+              <template v-else>
+                <div class="tile is-3">
+                  <v-popover offset="10" placement="top">
+                    <template slot="popover">
+                      <span class="tag is-success is-light">
+                        Copied to clipboard!!
+                      </span>
+                    </template>
+                    <button class="button is-info is-light is-medium" @click="copyToClipboard">
+                      <span class="icon"><i class="fas fa-copy"></i></span>
+                      <span>{{ roomId }}</span>
+                    </button>
+                  </v-popover>
+                </div>
+                <template v-if="!isGhost">
+                  <div class="tile is-6">
+                    <input class="input is-medium" type="text" placeholder="ルーム内で通じる名前を入力してください。" autocomplete="nickname" v-model="name">
+                  </div>
+                  <div class="tile is-3">
+                    <button class="button is-info is-light is-medium" @click="setName" :disabled="!name">
+                      <span class="icon"><i class="fas fa-sign-in-alt"></i></span>
+                    </button>
+                  </div>
+                </template>
+              </template>
+            </div>
+          </div>
+          <template v-if="roomData">
+            <template v-if="isShowNotification">
+              <div class="notification" :class="[isGhost ? 'is-dark' : 'is-primary']">
+                <button class="delete" @click="hideNotification"></button>
+                選択項目を設定してください。<br />
+                こちらの設定は、参加者全員が実施できます。途中で変更する事も可能です。
+              </div>
+            </template>
+            <div class="tile is-parent">
+              <button class="tile is-12 button is-danger is-light is-fullwidth" @click="openShowSettingModal" >
+                <span class="icon is-small"><i class="fas fa-edit"></i></span>
+                <span>選択項目変更</span>
+              </button>
+            </div>
+            <div class="modal" :class="[isShowSettingModal ? 'is-active' : '']">
+              <div class="modal-background"></div>
+              <div class="modal-content">
+                <div class="box">
+                  <div class="buttons are-medium is-3">
+                    <button @click="mode1220" class="tile button is-warning is-dark">
+                      1〜20
+                    </button>
+                    <button @click="modePlayingCards" class="tile button is-warning is-dark">
+                      トランプ
+                    </button>
+                    <button @click="modeFibonacci" class="tile button is-warning is-dark">
+                      フィボナッチ
+                    </button>
+                    <button @click="modeTension" class="tile button is-warning is-dark">
+                      気分
+                    </button>
+                  </div>
+                  <div class="columns is-flex-direction-row is-flex-wrap-wrap">
+                    <div class="column is-3" v-for="(customItem, index) in customItems">
+                      <input class="input is-rounded" type="text" v-model="customItems[index]"></input>
+                    </div>
+                    <div class="column">
+                      <button class="button is-ghost" @click="customAdd" >
+                        <span class="icon is-small"><i class="fas fa-plus-square"></i></span>
+                      </button>
+                      <button class="button is-ghost" @click="customTake" >
+                        <span class="icon is-small"><i class="fas fa-minus-square"></i></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="tile is-vertical">
+                  <button class="button is-primary is-light" @click="setSelectItems" >
+                    <span class="icon is-small"><i class="fas fa-angle-double-down"></i></span>
+                  </button>
+                </div>
+              </div>
+              <button class="modal-close is-large" aria-label="close" @click="closeShowSettingModal"></button>
+            </div>
+            <div class="tile is-parent">
+              <button v-if="!roomData.isVoting"
+                class="tile is-12 button is-primary is-light is-fullwidth"
+                @click="startVoting"
+                :disabled="!roomData.selectItems.length">
+                <span class="icon is-small"><i class="fas fa-hourglass-start"></i></span>
+                <span>START</span>
+              </button>
+              <button v-else
+                class="tile is-12 button is-light is-light is-fullwidth"
+                @click="stopVoting"
+                :disabled="!roomData.selectItems.length">
+                <span class="icon is-small"><i class="fas fa-hourglass-start"></i></span>
+                <span>CANCEL</span>
+              </button>
+            </div>
+            <template v-if="roomData.selectItems && roomData.selectItems.length">
+              <div class="tile is-parent columns is-justify-content-flex-start buttons are-medium">
+                <div class="column is-2" v-for="selectItem in roomData.selectItems">
+                  <button @click="selectHundole"
+                    class="button is-rounded is-fullwidth" 
+                    :value="selectItem"
+                    :class="[isSelected(selectItem) ? 'is-light' : 'is-black', roomData.isVoting ? 'is-primary' : '']"
+                    :disabled="!roomData.isVoting">
+                    {{ selectItem }}
+                  </button>
+                </div>
+              </div>
+            </template>
+            <div class="columns" v-if="selectInfo">
+              <div class="column">
+                <article class="message is-medium is-primary">
+                  <div class="message-header">
+                    <p>Average : {{ selectInfo.average }}</p>
+                  </div>
+                </article>
+              </div>
+              <div class="column">
+                <article class="message is-medium is-info">
+                  <div class="message-header">
+                    <p>Maximum : {{ selectInfo.max }}</p>
+                  </div>
+                </article>
+              </div>
+              <div class="column">
+                <article class="message is-medium is-danger">
+                  <div class="message-header">
+                    <p>Minimum : {{ selectInfo.min }}</p>
+                  </div>
+                </article>
+              </div>
+            </div>
+            <div class="tile is-parent columns is-12 is-flex-direction-row is-flex-wrap-wrap">
+              <template v-if="roomData.users">
+                <div class="column is-2" v-for="(user, key) in roomData.users">
+                  <div class="notification is-12"
+                    :class="userPanelClass(user, key)">
+                    <button class="delete" @click="exitRoom(key)"></button>
+                    <p class="subtitle is-6" :class="userPanelClass(user, key)">
+                      {{ user.name ? user.name : 'Under naming...' }}
+                    </p>
+                    <template v-if="roomData.isStart">
+                      <template v-if="roomData.isVoting">
+                        <template v-if="!user.selected">
+                          <span class="button is-loading is-fullwidth" :class="userPanelClass(user, key)">voting</span>
+                        </template>
+                        <template v-else>
+                          <span class="button is-fullwidth" :class="userPanelClass(user, key)">
+                            <span class="icon"><i class="fas fa-pen-square"></i></span>
+                          </span>
+                        </template>
+                      </template>
+                      <template v-else>
+                        <span class="title" 
+                          :class="userPanelClass(user, key)">
+                          {{ user.select }}
+                        </span>
+                      </template>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>
 
-const generateRoomId = () => Math.random().toString(32).substring(2)
-const generateUserId = () => Math.random().toString(32).substring(2)
-const saveRoomData = (id, data) => PropertiesService.getScriptProperties().setProperty(id, JSON.stringify({
-  ...data, 
-  lastUpdated: (new Date()).toISOString()
-}))
-
-const getRoomData = (id) => {
-  const property = PropertiesService.getScriptProperties().getProperty(id)
-  return property ? JSON.parse(property) : false
-}
-
-const createRoom = () => {
-  let roomId
-  do {
-    roomId = generateRoomId()
-  } while (getRoomData(roomId))
-  const userId = generateUserId()
-  const roomData = {
-    selectItems: [],
-    isVoting: false,
-    users: {[userId]: {selected: false, select: ''}},
+<script>
+new Vue({
+  el: '#app',
+  data: {
+    url: <?=url ?>,
+    roomId: '',
+    userId: '',
+    name: '',
+    joinRoomId: <?=roomId ?>,
+    custom: false,
+    customItems: [1, 2, 3],
+    isShowNotification: true,
+    isShowSettingModal: false,
+    roomData: null,
+    isPolling: false,
+    isGhost: false,
+    selectInfo: null,
+  },
+  computed: {
+  },
+  methods: {
+    isSelected: function(value) {
+      return !this.isGhost && this.roomData.users[this.userId].select == value
+    },
+    setRoomId: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomId = response.roomId
+        this.userId = response.userId
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).createRoom()
+    },
+    joinRoom: function(isGhost) {
+      console.log(isGhost)
+      google.script.run.withSuccessHandler((response) => {
+        if (response) {
+          this.roomId = this.joinRoomId
+          this.userId = response.userId
+          if (isGhost) {
+            this.isGhost = isGhost
+            this.userId = 'ghost'
+            this.roomData = JSON.parse(response.roomData)
+            this.polling()
+          }
+        } else {
+          this.joinRoomId = 'roomが存在しません。'
+        }
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).joinRoom(this.joinRoomId, isGhost)
+    },
+    setName: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+        this.polling()
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).setName(this.roomId, this.userId, this.name)
+    },
+    setSelectItems: function() {
+      const selectItems = this.customItems.filter(item => item)
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+        this.closeShowSettingModal()
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).setSelectItems(this.roomId, selectItems)
+    },
+    selectHundole: function(e) {
+      if (this.isGhost) return
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).setSelected(this.roomId, this.userId, e.target.value)
+    },
+    copyToClipboard: function() {
+      const urlLink = `${this.url}?roomId=${this.roomId}`
+      navigator.clipboard.writeText(urlLink)
+    },
+    customAdd: function() {
+      let addItem = 0
+      if (this.customItems.length) {
+        const lastOneBefore = Number(this.customItems[this.customItems.length - 2])
+        const lastOne = Number(this.customItems[this.customItems.length - 1])
+        addItem = lastOneBefore && lastOne ? (lastOne + lastOne - lastOneBefore) : (lastOne ? lastOne + 1 : '')
+      }
+      this.customItems = [...this.customItems, addItem]
+    },
+    customTake: function() {
+      if (!this.customItems.length) return
+      const tmp = [...this.customItems]
+      this.customItems = tmp.slice(0, -1)
+    },
+    mode1220: function() {
+      this.customItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    modeTension: function() {
+      this.customItems = ['Best', 'Good', 'Usually', 'Bad', 'Worst']
+    },
+    modePlayingCards: function() {
+      this.customItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 'Jack', 'Queen', 'King', 'Joker']
+    },
+    modeFibonacci: function() {
+      const fib = (n) => {
+        let a = 1
+        let b = 1
+        for (let i = 3; i <= n; i++) {
+          const c = a + b
+          a = b
+          b = c
+        }
+        return b
+      }
+      const arr = ['0', '1/2']
+      for (let i = 2; i < 13; i++) {
+        arr.push(fib(i))
+      }
+      arr.push('？')
+      this.customItems = arr
+    },
+    hideNotification: function() {
+      this.isShowNotification = false
+    },
+    openShowSettingModal: function() {
+      this.isShowSettingModal = true
+    },
+    closeShowSettingModal: function() {
+      this.isShowSettingModal = false
+    },
+    startVoting: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).isVoting(this.roomId, true)
+    },
+    stopVoting: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).isVoting(this.roomId, false)
+    },
+    calSelect: function() {
+      if (this.roomData.isVoting || !Object.keys(this.roomData.users).length) {
+        this.selectInfo = null
+        return
+      }
+      const selectNumbers = []
+      for (const user of Object.values(this.roomData.users)) {
+        if (isNaN(Number(user.select)) || !user.selected) {
+          this.selectInfo = null
+          return
+        }
+        selectNumbers.push(Number(user.select))
+      }
+      this.selectInfo = selectNumbers.length
+        ? {
+          average: selectNumbers.reduce((acc, cur) => acc + cur) / selectNumbers.length,
+          max: selectNumbers.reduce((acc, cur) => acc > cur ? acc : cur),
+          min: selectNumbers.reduce((acc, cur) => acc < cur ? acc : cur),
+        } : null
+    },
+    exitRoom: function(userId) {
+      google.script.run.withSuccessHandler((response) => {
+        console.log(response)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).exitRoom(this.roomId, userId)
+    },
+    polling: async function() {
+      if (this.isPolling) return
+      this.isPolling = true
+      while (this.isPolling) {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        google.script.run.withSuccessHandler((response) => {
+          const updateRoomData = response.roomData ? JSON.parse(response.roomData) : null
+          if (!updateRoomData || (!this.isGhost && !updateRoomData.users[this.userId])) {
+            window.open(this.url, '_top')
+            return
+          }
+          this.roomData = updateRoomData
+          this.calSelect()
+        }).withFailureHandler((e) => {
+          console.log(e)
+        }).polling(this.roomId)
+      }
+    },
+    userPanelClass: function(user, key) {
+      const classList = []
+      if (this.selectInfo) {
+        if (user.select == this.selectInfo.max) classList.push('is-info')
+        else if (user.select == this.selectInfo.min) classList.push('is-danger')
+        else classList.push('is-warning')
+      } else {
+        classList.push('is-warning')
+      }
+      if (this.userId != key) classList.push('is-light')
+      return classList
+    }
   }
-  saveRoomData(roomId, roomData)
-  return {roomId, userId, roomData: JSON.stringify(roomData)}
-}
-
-const joinRoom = (roomId, isGhost) => {
-  const roomData = getRoomData(roomId)
-  if (!roomData) return false
-  let userId
-  if (!isGhost) {
-    do {
-      userId = generateUserId()
-    } while (roomData.users[userId])
-    roomData.users[userId] = {selected: false, select: ''}
-    saveRoomData(roomId, roomData)
-  }
-  return {userId, roomData: JSON.stringify(roomData)}
-}
-
-const exitRoom = (roomId, userId) => {
-  const roomData = getRoomData(roomId)
-  if (!roomData) return false
-  delete roomData.users[userId]
-  roomData.isVoting = !!Object.values(roomData.users).filter(user => !user.selected).length
-  saveRoomData(roomId, roomData)
-}
-
-const setName = (roomId, userId, name) => {
-  const roomData = getRoomData(roomId)
-  if (!roomData) return false
-  roomData.users[userId].name = name
-  saveRoomData(roomId, roomData)
-  return {roomData: JSON.stringify(roomData)}
-}
-
-const setSelectItems = (roomId, selectItems) => {
-  const roomData = getRoomData(roomId)
-  if (!roomData) return false
-  roomData.selectItems = selectItems
-  Object.keys(roomData.users).forEach(userId => {
-    roomData.users[userId] = {...roomData.users[userId], selected: false, select: ''}
-  })
-  saveRoomData(roomId, roomData)
-  return {roomData: JSON.stringify(roomData)}
-}
-
-const isVoting = (roomId, isVoting) => {
-  const roomData = getRoomData(roomId)
-  if (!roomData) return false
-  roomData.isStart = isVoting || roomData.isStart
-  roomData.isVoting = isVoting
-  Object.keys(roomData.users).forEach(userId => {
-    roomData.users[userId] = {...roomData.users[userId], selected: false, select: ''}
-  })
-  saveRoomData(roomId, roomData)
-  return {roomData: JSON.stringify(roomData)}
-}
-
-const setSelected = (roomId, userId, value) => {
-  const roomData = getRoomData(roomId)
-  if (!roomData) return false
-  roomData.users[userId].selected = true
-  roomData.users[userId].select = value
-  roomData.isVoting = !!Object.values(roomData.users).filter(user => !user.selected).length
-  saveRoomData(roomId, roomData)
-  return {roomData: JSON.stringify(roomData)}
-}
-
-const polling = (roomId) => {
-  const roomData = getRoomData(roomId)
-  if (!roomData) return false
-  return {roomData: JSON.stringify(roomData)}
-}
-
-const deleteProperty = () => {
-  const properties = PropertiesService.getScriptProperties().getProperties()
-  const checkDate = new Date()
-  checkDate.setHours(checkDate.getHours() - 2)
-  Object.keys(properties)
-    .filter(key => JSON.parse(properties[key]).lastUpdated < checkDate.toISOString())
-    .forEach(key => PropertiesService.getScriptProperties().deleteProperty(key))
-}
-
-const deleteProperties = () => console.log(PropertiesService.getScriptProperties().deleteAllProperties())
-const viewProperties = () => console.log(PropertiesService.getScriptProperties().getProperties())
-const viewProperty = (key) => console.log(JSON.parse(PropertiesService.getScriptProperties().getProperty(key)))
+})
+</script>
