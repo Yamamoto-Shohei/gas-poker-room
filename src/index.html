@@ -54,9 +54,9 @@
                   </v-popover>
                 </div>
                 <template v-if="!isGhost">
-                  <div class="tile is-6">
+                  <form @submit.prevent="setName" class="tile is-6">
                     <input class="input is-medium" type="text" placeholder="ルーム内で通じる名前を入力してください。" autocomplete="nickname" v-model="name">
-                  </div>
+                  </form>
                   <div class="tile is-3">
                     <button class="button is-info is-light is-medium" @click="setName" :disabled="!name">
                       <span class="icon"><i class="fas fa-sign-in-alt"></i></span>
@@ -96,6 +96,9 @@
                     </button>
                     <button @click="modeTension" class="tile button is-warning is-dark">
                       気分
+                    </button>
+                    <button @click="modeOkrSelfDegree" class="tile button is-warning is-dark">
+                      OKR自身度
                     </button>
                   </div>
                   <div class="columns is-flex-direction-row is-flex-wrap-wrap">
@@ -311,7 +314,7 @@ new Vue({
       this.customItems = ['Best', 'Good', 'Usually', 'Bad', 'Worst']
     },
     modePlayingCards: function() {
-      this.customItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 'Jack', 'Queen', 'King', 'Joker']
+      this.customItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, '11: Jack', '12: Queen', '13: King', '?: Joker']
     },
     modeFibonacci: function() {
       const fib = (n) => {
@@ -324,12 +327,15 @@ new Vue({
         }
         return b
       }
-      const arr = ['0', '1/2']
+      const arr = ['0', '0.5']
       for (let i = 2; i < 13; i++) {
         arr.push(fib(i))
       }
       arr.push('？')
       this.customItems = arr
+    },
+    modeOkrSelfDegree: function() {
+      this.customItems = ['5: 軽すぎます、次ください', '4: 余裕あり', '3: 普通', '2: ちょっと辛い', '1: 光が見えない']
     },
     hideNotification: function() {
       this.isShowNotification = false
@@ -360,12 +366,17 @@ new Vue({
         return
       }
       const selectNumbers = []
+      const getNumber = (terget) => {
+        const s = `${terget}`.match(/(\d+)[^\d]?.*$/)
+        return s ? Number(s[1]) : null
+      }
       for (const user of Object.values(this.roomData.users)) {
-        if (isNaN(Number(user.select)) || !user.selected) {
+        const n = getNumber(user.select)
+        if (n === null || !user.selected) {
           this.selectInfo = null
           return
         }
-        selectNumbers.push(Number(user.select))
+        selectNumbers.push(n)
       }
       this.selectInfo = selectNumbers.length
         ? {
