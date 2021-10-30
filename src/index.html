@@ -43,9 +43,10 @@
                 <div class="tile is-3">
                   <v-popover offset="10" placement="top">
                     <template slot="popover">
-                      <span class="tag is-success is-light">
-                        Copied to clipboard!!
-                      </span>
+                      <div class="box">
+                        <textarea class="textarea is-small is-focused" :value="`${this.url}?roomId=${this.roomId}`" readonly></textarea>
+                        <button class="button is-small is-primary is-rounded" @click="copyToClipboard">Copy</button>
+                      </div>
                     </template>
                     <button class="button is-info is-light is-medium" @click="copyToClipboard">
                       <span class="icon"><i class="fas fa-copy"></i></span>
