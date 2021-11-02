@@ -379,18 +379,18 @@ new Vue({
         console.log(e)
       }).isVoting(this.roomId, false)
     },
+    getNumber: (terget) => {
+      const s = `${terget}`.match(/(\d+\.\d+|\d+)[^\d]?.*$/)
+      return s ? Number(s[1]) : null
+    },
     calSelect: function() {
       if (this.roomData.isVoting || !Object.keys(this.roomData.users).length) {
         this.selectInfo = null
         return
       }
       const selectNumbers = []
-      const getNumber = (terget) => {
-        const s = `${terget}`.match(/(\d+\.\d+|\d+)[^\d]?.*$/)
-        return s ? Number(s[1]) : null
-      }
       for (const user of Object.values(this.roomData.users)) {
-        const n = getNumber(user.select)
+        const n = this.getNumber(user.select)
         if (n === null || !user.selected) {
           this.selectInfo = null
           return
@@ -432,8 +432,8 @@ new Vue({
     userPanelClass: function(user, key) {
       const classList = []
       if (this.selectInfo) {
-        if (user.select == this.selectInfo.max) classList.push('is-info')
-        else if (user.select == this.selectInfo.min) classList.push('is-danger')
+        if (this.getNumber(user.select) == this.selectInfo.max) classList.push('is-info')
+        else if (this.getNumber(user.select) == this.selectInfo.min) classList.push('is-danger')
         else classList.push('is-warning')
       } else {
         classList.push('is-warning')
