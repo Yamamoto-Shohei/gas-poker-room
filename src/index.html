@@ -14,9 +14,28 @@
     <div id="app">
       <section class="hero" :class="[isGhost ? 'is-dark' : 'is-primary']">
         <div class="hero-body">
-          <p class="title">
-            Poker room
-          </p>
+          <nav class="navbar">
+            <p class="title">
+              Poker room
+            </p>
+            <div class="navbar-menu tile is-parent">
+              <template v-if="roomId">
+                <div class="tile is-5">
+                </div>
+                <div class="tile is-7">
+                  <v-popover offset="10" placement="bottom">
+                    <template slot="popover">
+                      <span class="tag is-success is-light">
+                        Copied to clipboard!!
+                      </span>
+                    </template>
+                    <button class="button is-link is-rounded" @click="copyToClipboard">Copy share link</button>
+                  </v-popover>
+                  <input class="input is-focused" :value="`${this.url}?roomId=${this.roomId}`" readonly>
+                </div>
+              </template>
+            </div>
+          </nav>
           <p class="subtitle">
             プランニングポーカーなど、選択した数値を一斉オープンする時にご利用ください。<br />
             <span class="subtitle is-6">Zoomなど参加者全員とビデオ会議 or 音声通話している状態で利用することを前提としています。<span>
@@ -41,12 +60,11 @@
               </template>
               <template v-else>
                 <div class="tile is-3">
-                  <v-popover offset="10" placement="top">
+                  <v-popover offset="10" placement="bottom">
                     <template slot="popover">
-                      <div class="box">
-                        <textarea class="textarea is-small is-focused" :value="`${this.url}?roomId=${this.roomId}`" readonly></textarea>
-                        <button class="button is-small is-primary is-rounded" @click="copyToClipboard">Copy</button>
-                      </div>
+                      <span class="tag is-success is-light">
+                        Copied to clipboard!!
+                      </span>
                     </template>
                     <button class="button is-info is-light is-medium" @click="copyToClipboard">
                       <span class="icon"><i class="fas fa-copy"></i></span>
@@ -336,7 +354,7 @@ new Vue({
       this.customItems = arr
     },
     modeOkrSelfDegree: function() {
-      this.customItems = ['5: 軽すぎます、次ください', '4: 余裕あり', '3: 普通', '2: ちょっと辛い', '1: 光が見えない']
+      this.customItems = ['5: 軽い！次ください', '4: 余裕あり', '3: 普通', '2: ちょっと難しい', '1: 光が見えない']
     },
     hideNotification: function() {
       this.isShowNotification = false
@@ -368,7 +386,7 @@ new Vue({
       }
       const selectNumbers = []
       const getNumber = (terget) => {
-        const s = `${terget}`.match(/(\d+)[^\d]?.*$/)
+        const s = `${terget}`.match(/(\d+\.\d+|\d+)[^\d]?.*$/)
         return s ? Number(s[1]) : null
       }
       for (const user of Object.values(this.roomData.users)) {
