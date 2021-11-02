@@ -1,9 +1,10 @@
 # GASウェブアプリでプランニングポーカーを作ってみた
 
-![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/935314ff-08ce-7458-d453-98266880073a.png)
+![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/928512a4-b56d-3a7f-280b-6ee259c81d3d.png)
 
-GASウェブアプリも公開しておきます。
-[Poker room 公開用リンク](https://script.google.com/macros/s/AKfycbxIGjw3fDdSui9Y958CBu3O66RN8w26uxmLGJT3JSiPfqwa4lR6tLWCR0E8Buj1wr1z/exec)
+
+- [Poker room 公開用リンク](https://script.google.com/macros/s/AKfycbxIGjw3fDdSui9Y958CBu3O66RN8w26uxmLGJT3JSiPfqwa4lR6tLWCR0E8Buj1wr1z/exec)
+
 
 ## 背景
 
@@ -26,7 +27,8 @@ GASウェブアプリも公開しておきます。
 
 - 選択項目を誰でも好きなように変更可能
 
-    <img width="30%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/b8dde55d-6397-9314-ace7-4deb6e1b9a1e.png"><img width="30%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/28e8c540-94f6-f503-510c-b8e6c053764e.png"><img width="30%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/bf903792-7776-da37-5384-b31c1a75ab0d.png">
+    <img width="30%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/b8dde55d-6397-9314-ace7-4deb6e1b9a1e.png"><img width="30%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/28e8c540-94f6-f503-510c-b8e6c053764e.png"><img width="30%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/bf903792-7776-da37-5384-b31c1a75ab0d.png"><img width="30%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/29c0f049-cf28-6432-9b13-faa5d785e321.png">
+
 
   - プリセットされている選択項目は４つ
   - 値は変更可能であり、制限も設けていないので自由な文字に変更可能
@@ -44,6 +46,15 @@ GASウェブアプリも公開しておきます。
   - 右上の`x`ボタンで退場する、させることが可能
   - 全員の選択が完了すると自動オープン
 
+- 選択結果の平均、最大、最小表示
+
+    ![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/25ffad30-ae29-f118-4de3-af5d53d24937.png)
+
+- Ghostモード参加機能
+
+    ![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/282054/6ba54608-dee8-5ad6-550b-75f939441116.png)
+
+    - ポーカーに参加しないが、見学する場合にカードを選択が制限されている状態で参加することが可能
 
 ## 実装
 
@@ -126,3 +137,4 @@ const deleteProperty = () => {
 
 機能拡張はしていく予定ですので、こんな機能があると面白いなどコメントいただけると対応してGitHubを更新していきます。
 Issueに上げていただけると感激です。
+
