@@ -51,6 +51,7 @@ const exitRoom = (roomId, userId) => {
   if (!roomData) return false
   delete roomData.users[userId]
   roomData.isVoting = !!Object.values(roomData.users).filter(user => !user.selected).length
+  roomData.isStart = roomData.isVoting || roomData.isStart
   saveRoomData(roomId, roomData)
 }
 
@@ -76,8 +77,8 @@ const setSelectItems = (roomId, selectItems) => {
 const isVoting = (roomId, isVoting) => {
   const roomData = getRoomData(roomId)
   if (!roomData) return false
-  roomData.isStart = isVoting || roomData.isStart
   roomData.isVoting = isVoting
+  roomData.isStart = roomData.isVoting || roomData.isStart
   Object.keys(roomData.users).forEach(userId => {
     roomData.users[userId] = {...roomData.users[userId], selected: false, select: ''}
   })
@@ -91,6 +92,7 @@ const setSelected = (roomId, userId, value) => {
   roomData.users[userId].selected = true
   roomData.users[userId].select = value
   roomData.isVoting = !!Object.values(roomData.users).filter(user => !user.selected).length
+  roomData.isStart = roomData.isVoting || roomData.isStart
   saveRoomData(roomId, roomData)
   return {roomData: JSON.stringify(roomData)}
 }
