@@ -150,6 +150,7 @@
               <button v-if="!roomData.isVoting"
                 v-tooltip="{
                   trigger: 'hover focus',
+                  delay: { show: 300, hide: 100 },
                   content: '投票を開始します。'
                 }"
                 class="tile is-12 button is-primary is-light is-fullwidth"
@@ -162,6 +163,7 @@
                 <button
                   v-tooltip="{
                     trigger: 'hover focus',
+                    delay: { show: 300, hide: 100 },
                     content: '投票を終了して、投票結果を表示します。'
                   }"
                   class="tile is-6 button is-link is-light is-fullwidth"
@@ -173,6 +175,7 @@
                 <button
                   v-tooltip="{
                     trigger: 'hover focus',
+                    delay: { show: 300, hide: 100 },
                     content: '投票を中止します。投票結果は表示されません。'
                   }"
                   class="tile is-6 button is-light is-light is-fullwidth"
