@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
     <title>Poker room</title>
     <base target="_top">
+    <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
   </head>
   <body>
     <div id="app">
@@ -23,14 +24,14 @@
                 <div class="tile is-5">
                 </div>
                 <div class="tile is-7">
-                  <v-popover offset="10" placement="bottom">
-                    <template slot="popover">
-                      <span class="tag is-success is-light">
-                        Copied to clipboard!!
-                      </span>
-                    </template>
-                    <button class="button is-link is-rounded" @click="copyToClipboard">Copy share link</button>
-                  </v-popover>
+                  <button
+                    v-tooltip="{
+                      trigger: 'hover focus',
+                      hideOnTargetClick: ture,
+                      delay: { show: 0, hide: 100 },
+                      content: '共有用URLをクリップボードにコピーします。'
+                    }"
+                    class="button is-link is-rounded" @click="copyToClipboard">Copy share link</button>
                   <input class="input is-focused" :value="`${this.url}?roomId=${this.roomId}`" readonly>
                 </div>
               </template>
@@ -60,17 +61,17 @@
               </template>
               <template v-else>
                 <div class="tile is-3">
-                  <v-popover offset="10" placement="bottom">
-                    <template slot="popover">
-                      <span class="tag is-success is-light">
-                        Copied to clipboard!!
-                      </span>
-                    </template>
-                    <button class="button is-info is-light is-medium" @click="copyToClipboard">
-                      <span class="icon"><i class="fas fa-copy"></i></span>
-                      <span>{{ roomId }}</span>
-                    </button>
-                  </v-popover>
+                  <button
+                    v-tooltip="{
+                      trigger: 'hover focus',
+                      hideOnTargetClick: ture,
+                      delay: { show: 0, hide: 100 },
+                      content: '共有用URLをクリップボードにコピーします。'
+                    }"
+                    class="button is-info is-light is-medium" @click="copyToClipboard">
+                    <span class="icon"><i class="fas fa-copy"></i></span>
+                    <span>{{ roomId }}</span>
+                  </button>
                 </div>
                 <template v-if="!isGhost">
                   <form @submit.prevent="setName" class="tile is-6">
@@ -94,7 +95,7 @@
               </div>
             </template>
             <div class="tile is-parent">
-              <button class="tile is-12 button is-danger is-light is-fullwidth" @click="openShowSettingModal" >
+              <button class="tile is-12 button is-danger is-light is-fullwidth is-small" @click="openShowSettingModal" >
                 <span class="icon is-small"><i class="fas fa-edit"></i></span>
                 <span>選択項目変更</span>
               </button>
@@ -105,7 +106,7 @@
                 <div class="box">
                   <div class="buttons are-medium is-3">
                     <button @click="mode1220" class="tile button is-warning is-dark">
-                      1〜20
+                      0.5, 1〜20
                     </button>
                     <button @click="modePlayingCards" class="tile button is-warning is-dark">
                       トランプ
@@ -118,6 +119,9 @@
                     </button>
                     <button @click="modeOkrSelfDegree" class="tile button is-warning is-dark">
                       OKR自身度
+                    </button>
+                    <button @click="modeHighMediumLow" class="tile button is-warning is-dark">
+                      優先度(高、中、低)
                     </button>
                   </div>
                   <div class="columns is-flex-direction-row is-flex-wrap-wrap">
@@ -142,21 +146,42 @@
               </div>
               <button class="modal-close is-large" aria-label="close" @click="closeShowSettingModal"></button>
             </div>
-            <div class="tile is-parent">
+            <div class="tile is-parent buttons are-medium">
               <button v-if="!roomData.isVoting"
+                v-tooltip="{
+                  trigger: 'hover focus',
+                  content: '投票を開始します。'
+                }"
                 class="tile is-12 button is-primary is-light is-fullwidth"
                 @click="startVoting"
                 :disabled="!roomData.selectItems.length">
                 <span class="icon is-small"><i class="fas fa-hourglass-start"></i></span>
                 <span>START</span>
               </button>
-              <button v-else
-                class="tile is-12 button is-light is-light is-fullwidth"
-                @click="stopVoting"
-                :disabled="!roomData.selectItems.length">
-                <span class="icon is-small"><i class="fas fa-hourglass-start"></i></span>
-                <span>CANCEL</span>
-              </button>
+              <template v-else>
+                <button
+                  v-tooltip="{
+                    trigger: 'hover focus',
+                    content: '投票を終了して、投票結果を表示します。'
+                  }"
+                  class="tile is-6 button is-link is-light is-fullwidth"
+                  @click="finishlVoting"
+                  :disabled="!roomData.selectItems.length">
+                  <span class="icon is-small"><i class="fas fa-gavel"></i></span>
+                  <span>FINISH</span>
+                </button>
+                <button
+                  v-tooltip="{
+                    trigger: 'hover focus',
+                    content: '投票を中止します。投票結果は表示されません。'
+                  }"
+                  class="tile is-6 button is-light is-light is-fullwidth"
+                  @click="cancelVoting"
+                  :disabled="!roomData.selectItems.length">
+                  <span class="icon is-small"><i class="fas fa-hourglass-start"></i></span>
+                  <span>CANCEL</span>
+                </button>
+              </template>
             </div>
             <template v-if="roomData.selectItems && roomData.selectItems.length">
               <div class="tile is-parent columns is-justify-content-flex-start buttons are-medium">
@@ -327,7 +352,7 @@ new Vue({
       this.customItems = tmp.slice(0, -1)
     },
     mode1220: function() {
-      this.customItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+      this.customItems = [0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     },
     modeTension: function() {
       this.customItems = ['Best', 'Good', 'Usually', 'Bad', 'Worst']
@@ -356,6 +381,9 @@ new Vue({
     modeOkrSelfDegree: function() {
       this.customItems = ['5: 軽い！次ください', '4: 余裕あり', '3: 普通', '2: ちょっと難しい', '1: 光が見えない']
     },
+    modeHighMediumLow: function() {
+      this.customItems = ['3: 高', '2: 中', '1: 低']
+    },
     hideNotification: function() {
       this.isShowNotification = false
     },
@@ -370,14 +398,21 @@ new Vue({
         this.roomData = JSON.parse(response.roomData)
       }).withFailureHandler((e) => {
         console.log(e)
-      }).isVoting(this.roomId, true)
+      }).isVoting(this.roomId, true, false)
     },
-    stopVoting: function() {
+    finishlVoting: function() {
       google.script.run.withSuccessHandler((response) => {
         this.roomData = JSON.parse(response.roomData)
       }).withFailureHandler((e) => {
         console.log(e)
-      }).isVoting(this.roomId, false)
+      }).isVoting(this.roomId, false, true)
+    },
+    cancelVoting: function() {
+      google.script.run.withSuccessHandler((response) => {
+        this.roomData = JSON.parse(response.roomData)
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).isVoting(this.roomId, false, false)
     },
     getNumber: (terget) => {
       const s = `${terget}`.match(/(\d+\.\d+|\d+)[^\d]?.*$/)
@@ -393,7 +428,7 @@ new Vue({
         const n = this.getNumber(user.select)
         if (n === null || !user.selected) {
           this.selectInfo = null
-          return
+          continue
         }
         selectNumbers.push(n)
       }
