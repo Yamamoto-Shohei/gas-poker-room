@@ -27,7 +27,7 @@
                   <button
                     v-tooltip="{
                       trigger: 'hover focus',
-                      hideOnTargetClick: ture,
+                      hideOnTargetClick: true,
                       delay: { show: 0, hide: 100 },
                       content: '共有用URLをクリップボードにコピーします。'
                     }"
@@ -64,7 +64,7 @@
                   <button
                     v-tooltip="{
                       trigger: 'hover focus',
-                      hideOnTargetClick: ture,
+                      hideOnTargetClick: true,
                       delay: { show: 0, hide: 100 },
                       content: '共有用URLをクリップボードにコピーします。'
                     }"
@@ -118,7 +118,7 @@
                       気分
                     </button>
                     <button @click="modeOkrSelfDegree" class="tile button is-warning is-dark">
-                      OKR自身度
+                      OKR自信度
                     </button>
                     <button @click="modeHighMediumLow" class="tile button is-warning is-dark">
                       優先度(高、中、低)
@@ -145,6 +145,35 @@
                 </div>
               </div>
               <button class="modal-close is-large" aria-label="close" @click="closeShowSettingModal"></button>
+            </div>
+            <div class="tile is-parent">
+              <template v-if="isTitleEdit">
+                <form @submit.prevent="(e) => setTitle(e.target.title.value)" class="tile is-parent">
+                  <div class="tile is-10">
+                    <input class="input is-medium" type="text" name="title" placeholder="集計するお題を設定">
+                  </div>
+                  <div class="tile is-2">
+                    <button class="button is-info is-light is-medium" type="submit">
+                      <span class="icon"><i class="fas fa-cat"></i></span>
+                    </button>
+                  </div>
+                </form>
+              </template>
+              <template v-else>
+                <button 
+                  v-tooltip="{
+                    trigger: 'hover focus',
+                    delay: { show: 300, hide: 100 },
+                    content: 'クリックでお題を変更できます。'
+                  }"
+                  class="tile is-12 button is-fullwidth"
+                  :class="[roomData.title ? 'is-info is-large' : 'is-info is-outlined is-small']"
+                  @click="() => isTitleEdit = !isTitleEdit"
+                >
+                  <span class="icon"><i class="fas fa-cat"></i></span>
+                  <h2>{{ roomData.title }}</h2>
+                </button>
+              </template>
             </div>
             <div class="tile is-parent buttons are-medium">
               <button v-if="!roomData.isVoting"
@@ -274,6 +303,7 @@ new Vue({
     isShowNotification: true,
     isShowSettingModal: false,
     roomData: null,
+    isTitleEdit: false,
     isPolling: false,
     isGhost: false,
     selectInfo: null,
@@ -292,6 +322,10 @@ new Vue({
         console.log(e)
       }).createRoom()
     },
+    setRoomData: function(roomDataString) {
+      const roomData = JSON.parse(roomDataString)
+      this.roomData = roomData
+    },
     joinRoom: function(isGhost) {
       console.log(isGhost)
       google.script.run.withSuccessHandler((response) => {
@@ -301,7 +335,7 @@ new Vue({
           if (isGhost) {
             this.isGhost = isGhost
             this.userId = 'ghost'
-            this.roomData = JSON.parse(response.roomData)
+            this.setRoomData(response.roomData)
             this.polling()
           }
         } else {
@@ -313,7 +347,7 @@ new Vue({
     },
     setName: function() {
       google.script.run.withSuccessHandler((response) => {
-        this.roomData = JSON.parse(response.roomData)
+        this.setRoomData(response.roomData)
         this.polling()
       }).withFailureHandler((e) => {
         console.log(e)
@@ -322,7 +356,7 @@ new Vue({
     setSelectItems: function() {
       const selectItems = this.customItems.filter(item => item)
       google.script.run.withSuccessHandler((response) => {
-        this.roomData = JSON.parse(response.roomData)
+        this.setRoomData(response.roomData)
         this.closeShowSettingModal()
       }).withFailureHandler((e) => {
         console.log(e)
@@ -331,7 +365,7 @@ new Vue({
     selectHundole: function(e) {
       if (this.isGhost) return
       google.script.run.withSuccessHandler((response) => {
-        this.roomData = JSON.parse(response.roomData)
+        this.setRoomData(response.roomData)
       }).withFailureHandler((e) => {
         console.log(e)
       }).setSelected(this.roomId, this.userId, e.target.value)
@@ -358,7 +392,8 @@ new Vue({
       this.customItems = [0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     },
     modeTension: function() {
-      this.customItems = ['Best', 'Good', 'Usually', 'Bad', 'Worst']
+      this.customItems = ['Extra best', 'Best', 'Good', 'Usually', 'Bad', 'Worst']
+      this.setTitle('気分')
     },
     modePlayingCards: function() {
       this.customItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, '11: Jack', '12: Queen', '13: King', '?: Joker']
@@ -383,9 +418,11 @@ new Vue({
     },
     modeOkrSelfDegree: function() {
       this.customItems = ['5: 軽い！次ください', '4: 余裕あり', '3: 普通', '2: ちょっと難しい', '1: 光が見えない']
+      this.setTitle('OKR自信度')
     },
     modeHighMediumLow: function() {
       this.customItems = ['3: 高', '2: 中', '1: 低']
+      this.setTitle('優先度')
     },
     hideNotification: function() {
       this.isShowNotification = false
@@ -398,24 +435,32 @@ new Vue({
     },
     startVoting: function() {
       google.script.run.withSuccessHandler((response) => {
-        this.roomData = JSON.parse(response.roomData)
+        this.setRoomData(response.roomData)
       }).withFailureHandler((e) => {
         console.log(e)
       }).isVoting(this.roomId, true, false)
     },
     finishlVoting: function() {
       google.script.run.withSuccessHandler((response) => {
-        this.roomData = JSON.parse(response.roomData)
+        this.setRoomData(response.roomData)
       }).withFailureHandler((e) => {
         console.log(e)
       }).isVoting(this.roomId, false, true)
     },
     cancelVoting: function() {
       google.script.run.withSuccessHandler((response) => {
-        this.roomData = JSON.parse(response.roomData)
+        this.setRoomData(response.roomData)
       }).withFailureHandler((e) => {
         console.log(e)
       }).isVoting(this.roomId, false, false)
+    },
+    setTitle: function(title) {
+      google.script.run.withSuccessHandler((response) => {
+        this.setRoomData(response.roomData)
+        this.isTitleEdit = false
+      }).withFailureHandler((e) => {
+        console.log(e)
+      }).setTitle(this.roomId, title ? title : '')
     },
     getNumber: (terget) => {
       const s = `${terget}`.match(/(\d+\.\d+|\d+)[^\d]?.*$/)

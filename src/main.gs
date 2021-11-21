@@ -74,6 +74,14 @@ const setSelectItems = (roomId, selectItems) => {
   return {roomData: JSON.stringify(roomData)}
 }
 
+const setTitle = (roomId, title) => {
+  const roomData = getRoomData(roomId)
+  if (!roomData) return false
+  roomData.title = title
+  saveRoomData(roomId, roomData)
+  return {roomData: JSON.stringify(roomData)}
+}
+
 const isVoting = (roomId, isVoting, isFinish) => {
   const roomData = getRoomData(roomId)
   if (!roomData) return false
